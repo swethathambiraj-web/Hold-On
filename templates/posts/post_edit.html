@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Post • Hold On{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+  <div class="card-custom p-4 p-md-5">
+    <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom border-secondary">
+      <h4 class="fw-bold mb-0"><i class="bi bi-pencil-square text-warning me-2"></i> Edit Post</h4>
+      <a href="{% url 'posts:post_detail' pk=post.pk %}" class="btn-close btn-close-white"></a>
+    </div>
+
+    <!-- Media preview -->
+    <div class="mb-4 text-center">
+      {% with media=post.media_items.first %}
+        {% if media %}
+          <img src="{{ media.file.url }}" class="rounded-3 shadow-sm" style="max-height: 200px; max-width: 100%; object-fit: contain;">
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <form method="POST">
+      {% csrf_token %}
+      {{ form|crispy }}
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <a href="{% url 'posts:post_detail' pk=post.pk %}" class="btn btn-surface">Cancel</a>
+        <button type="submit" class="btn btn-brand">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

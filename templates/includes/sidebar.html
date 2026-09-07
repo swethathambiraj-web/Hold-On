@@ -1,0 +1,72 @@
+{% load static %}
+<aside class="sidebar">
+  <a href="{% url 'feed:home' %}" class="sidebar-brand">
+    <div class="brand-icon">
+      <i class="bi bi-camera-reels-fill"></i>
+    </div>
+    <span>Hold On</span>
+  </a>
+
+  <!-- Global Search Input with Dropdown -->
+  <div class="px-2 mb-3 position-relative">
+    <div class="input-group">
+      <span class="input-group-text bg-surface border-0 text-muted" style="border-radius: 12px 0 0 12px;">
+        <i class="bi bi-search"></i>
+      </span>
+      <input type="text" id="global-search-input" class="form-control bg-surface border-0 text-light" style="border-radius: 0 12px 12px 0; font-size: 0.88rem;" placeholder="Search..." autocomplete="off">
+    </div>
+    <!-- Search Dropdown Container -->
+    <div id="search-results-dropdown" class="card-custom position-absolute w-100 shadow-lg mt-1 p-2" style="display:none; z-index: 1100; max-height: 320px; overflow-y: auto;"></div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="{% url 'feed:home' %}" class="nav-item-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+      <i class="bi bi-house-door-fill"></i>
+      <span>Home</span>
+    </a>
+    
+    <a href="{% url 'feed:explore' %}" class="nav-item-link {% if request.resolver_match.url_name == 'explore' %}active{% endif %}">
+      <i class="bi bi-compass-fill"></i>
+      <span>Explore</span>
+    </a>
+
+    <a href="{% url 'posts:post_create' %}" class="nav-item-link {% if request.resolver_match.url_name == 'post_create' %}active{% endif %}">
+      <i class="bi bi-plus-square-fill"></i>
+      <span>Create</span>
+    </a>
+
+    <a href="{% url 'messaging:inbox' %}" class="nav-item-link {% if 'messages' in request.path %}active{% endif %}">
+      <i class="bi bi-chat-dots-fill"></i>
+      <span>Messages</span>
+      {% if unread_messages_count > 0 %}
+        <span class="badge-counter">{{ unread_messages_count }}</span>
+      {% endif %}
+    </a>
+
+    <a href="{% url 'notifications:list' %}" class="nav-item-link {% if 'notifications' in request.path %}active{% endif %}">
+      <i class="bi bi-heart-fill"></i>
+      <span>Notifications</span>
+      {% if unread_notifications_count > 0 %}
+        <span class="badge-counter">{{ unread_notifications_count }}</span>
+      {% endif %}
+    </a>
+
+    <a href="{% url 'accounts:profile' username=request.user.username %}" class="nav-item-link {% if profile_user and profile_user == request.user %}active{% endif %}">
+      <img src="{{ request.user.avatar_url }}" class="rounded-circle" style="width: 26px; height: 26px; object-fit: cover;" alt="avatar">
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="d-flex align-items-center justify-content-between px-2">
+      <button class="btn btn-sm btn-surface d-flex align-items-center gap-2" onclick="toggleTheme()">
+        <i class="bi bi-sun-fill theme-toggle-icon"></i>
+        <span style="font-size: 0.8rem;">Theme</span>
+      </button>
+
+      <a href="{% url 'accounts:logout' %}" class="btn btn-sm btn-outline-danger" title="Logout">
+        <i class="bi bi-box-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</aside>

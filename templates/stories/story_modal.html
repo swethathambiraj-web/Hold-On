@@ -1,0 +1,31 @@
+<!-- Fullscreen Story Viewer Modal -->
+<div id="story-viewer-modal" class="story-viewer-backdrop">
+  <div class="story-viewer-container">
+    <!-- Story Progress Segments -->
+    <div class="story-progress-bar-container" id="story-progress-bars"></div>
+
+    <!-- Story Viewer Top Header -->
+    <div class="story-viewer-header">
+      <div class="d-flex align-items-center gap-2">
+        <img id="story-modal-user-avatar" src="" class="rounded-circle" style="width: 34px; height: 34px; object-fit: cover; border: 1.5px solid #fff;" alt="avatar">
+        <div>
+          <span id="story-modal-username" class="fw-bold" style="font-size: 0.9rem;"></span>
+          <span id="story-modal-time" class="ms-2 opacity-75" style="font-size: 0.75rem;"></span>
+        </div>
+      </div>
+      <button class="btn btn-link text-white p-0 fs-4 text-decoration-none" onclick="StoryViewer.close()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <!-- Tap areas for navigation -->
+    <div class="story-tap-left" onclick="StoryViewer.prev()"></div>
+    <div class="story-tap-right" onclick="StoryViewer.next()"></div>
+
+    <!-- Story Media -->
+    <img id="story-modal-media" src="" class="story-viewer-media" alt="Story">
+
+    <!-- Caption overlay -->
+    <div id="story-modal-caption" class="story-viewer-caption"></div>
+  </div>
+</div>

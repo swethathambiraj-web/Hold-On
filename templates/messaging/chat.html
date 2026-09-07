@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Chat with @{{ other_user.username }} • Hold On{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+  <div class="messages-container">
+    <!-- Left Conversations Sidebar (hidden on small screens) -->
+    <div class="inbox-sidebar d-none d-md-flex">
+      <div class="inbox-header">
+        <span class="text-light">{{ user.username }}</span>
+        <a href="{% url 'messaging:inbox' %}" class="text-light text-decoration-none">
+          <i class="bi bi-pencil-square fs-5"></i>
+        </a>
+      </div>
+
+      <div class="conversations-list">
+        {% for conv in all_conversations %}
+          {% with other=conv.get_other_participant|default:user %}
+            <a href="{% url 'messaging:chat' conversation_id=conv.id %}" class="conversation-item text-decoration-none {% if conv.id == conversation.id %}active{% endif %}">
+              <img src="{{ other.avatar_url }}" class="rounded-circle" style="width: 44px; height: 44px; object-fit: cover;" alt="{{ other.username }}">
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="fw-bold text-light" style="font-size: 0.9rem;">{{ other.username }}</div>
+                <div class="text-muted text-truncate" style="font-size: 0.78rem;">
+                  {% with last_msg=conv.last_message %}
+                    {% if last_msg %}
+                      {{ last_msg.text|default:"[Media]" }}
+                    {% else %}
+                      Active chat
+                    {% endif %}
+                  {% endwith %}
+                </div>
+              </div>
+            </a>
+          {% endwith %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Active Chat Window -->
+    <div class="chat-main">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <a href="{% url 'messaging:inbox' %}" class="d-md-none text-light fs-4 me-2 text-decoration-none">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <a href="{% url 'accounts:profile' username=other_user.username %}" class="d-flex align-items-center gap-3 text-decoration-none">
+          <img src="{{ other_user.avatar_url }}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;" alt="{{ other_user.username }}">
+          <div>
+            <div class="fw-bold text-light" style="font-size: 0.95rem;">{{ other_user.username }}</div>
+            <small class="text-muted" style="font-size: 0.72rem;">{{ other_user.get_full_name }}</small>
+          </div>
+        </a>
+      </div>
+
+      <!-- Messages Stream -->
+      <div class="chat-messages" id="chat-messages-container">
+        {% for msg in messages_list %}
+          <div class="message-bubble {% if msg.sender == user %}outgoing{% else %}incoming{% endif %}" id="msg-{{ msg.id }}">
+            {% if msg.media %}
+              <img src="{{ msg.media.url }}" class="rounded mb-1 d-block" style="max-width: 220px; max-height: 220px; object-fit: cover;" alt="Chat media">
+            {% endif %}
+            {% if msg.text %}
+              <div>{{ msg.text|linebreaksbr }}</div>
+            {% endif %}
+            <div class="message-time">{{ msg.created_at|date:"H:i" }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Chat Input Form -->
+      <form class="chat-input-area" id="chat-send-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="chat-media-input" class="btn btn-link text-light p-0 mb-0 fs-5" style="cursor: pointer;">
+          <i class="bi bi-image"></i>
+        </label>
+        <input type="file" id="chat-media-input" name="media" accept="image/*" class="d-none" onchange="previewChatMedia(this)">
+
+        <input type="text" id="chat-text-input" name="text" class="form-control bg-surface border-0 text-light py-2" placeholder="Message..." autocomplete="off">
+
+        <button type="submit" class="btn btn-brand btn-sm px-3 py-2">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const conversationId = {{ conversation.id }};
+const messagesContainer = document.getElementById('chat-messages-container');
+let lastMsgId = {% if messages_list.last %}{{ messages_list.last.id }}{% else %}0{% endif %};
+
+function scrollToBottom() {
+  if (messagesContainer) {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+}
+scrollToBottom();
+
+function previewChatMedia(input) {
+  if (input.files && input.files[0]) {
+    const textInput = document.getElementById('chat-text-input');
+    textInput.placeholder = `Attached: ${input.files[0].name}`;
+  }
+}
+
+// Send Message via AJAX
+document.getElementById('chat-send-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const textInput = document.getElementById('chat-text-input');
+  const mediaInput = document.getElementById('chat-media-input');
+
+  const text = textInput.value.trim();
+  const file = mediaInput.files[0];
+
+  if (!text && !file) return;
+
+  const formData = new FormData();
+  if (text) formData.append('text', text);
+  if (file) formData.append('media', file);
+
+  try {
+    const res = await fetch(`/messages/send/${conversationId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      textInput.value = '';
+      textInput.placeholder = 'Message...';
+      mediaInput.value = '';
+
+      lastMsgId = data.id;
+
+      let mediaHtml = data.media_url ? `<img src="${data.media_url}" class="rounded mb-1 d-block" style="max-width: 220px; max-height: 220px; object-fit: cover;">` : '';
+      let textHtml = data.text ? `<div>${data.text}</div>` : '';
+
+      const bubbleHtml = `
+        <div class="message-bubble outgoing" id="msg-${data.id}">
+          ${mediaHtml}
+          ${textHtml}
+          <div class="message-time">${data.created_at}</div>
+        </div>
+      `;
+      messagesContainer.insertAdjacentHTML('beforeend', bubbleHtml);
+      scrollToBottom();
+    }
+  } catch (err) {
+    console.error('Failed to send message:', err);
+  }
+});
+
+// Live Polling for New Messages every 3 seconds
+setInterval(async () => {
+  try {
+    const res = await fetch(`/messages/messages/${conversationId}/?after_id=${lastMsgId}`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const data = await res.json();
+
+    if (data.messages && data.messages.length > 0) {
+      data.messages.forEach(msg => {
+        lastMsgId = Math.max(lastMsgId, msg.id);
+        const bubbleClass = msg.is_me ? 'outgoing' : 'incoming';
+        let mediaHtml = msg.media_url ? `<img src="${msg.media_url}" class="rounded mb-1 d-block" style="max-width: 220px; max-height: 220px; object-fit: cover;">` : '';
+        let textHtml = msg.text ? `<div>${msg.text}</div>` : '';
+
+        const bubbleHtml = `
+          <div class="message-bubble ${bubbleClass}" id="msg-${msg.id}">
+            ${mediaHtml}
+            ${textHtml}
+            <div class="message-time">${msg.created_at}</div>
+          </div>
+        `;
+        messagesContainer.insertAdjacentHTML('beforeend', bubbleHtml);
+      });
+      scrollToBottom();
+    }
+  } catch (err) {
+    // Silent fail in polling
+  }
+}, 3000);
+</script>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% load humanize %}
+<article class="post-card" id="post-{{ post.id }}">
+  <!-- Post Header -->
+  <header class="post-header">
+    <div class="post-author-info">
+      <a href="{% url 'accounts:profile' username=post.author.username %}">
+        <img src="{{ post.author.avatar_url }}" alt="{{ post.author.username }}" class="author-avatar">
+      </a>
+      <div>
+        <a href="{% url 'accounts:profile' username=post.author.username %}" class="author-name">
+          {{ post.author.username }}
+        </a>
+        {% if post.location %}
+          <div class="post-location"><i class="bi bi-geo-alt"></i> {{ post.location }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Dropdown Menu -->
+    <div class="dropdown">
+      <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+        <i class="bi bi-three-dots"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end bg-secondary border-secondary">
+        <li><a class="dropdown-item text-light" href="{% url 'posts:post_detail' pk=post.id %}"><i class="bi bi-box-arrow-up-right me-2"></i> Go to post</a></li>
+        {% if post.author == request.user %}
+          <li><a class="dropdown-item text-warning" href="{% url 'posts:post_edit' pk=post.id %}"><i class="bi bi-pencil me-2"></i> Edit post</a></li>
+          <li>
+            <form action="{% url 'posts:post_delete' pk=post.id %}" method="POST" onsubmit="return confirm('Delete this post?');">
+              {% csrf_token %}
+              <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i> Delete</button>
+            </form>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+  </header>
+
+  <!-- Post Media Carousel -->
+  <div class="post-media-wrapper" data-post-id="{{ post.id }}">
+    <i class="bi bi-heart-fill heart-burst"></i>
+
+    {% if post.media_items.count > 1 %}
+      <div id="carouselPost{{ post.id }}" class="carousel slide" data-bs-interval="false">
+        <div class="carousel-indicators">
+          {% for media in post.media_items.all %}
+            <button type="button" data-bs-target="#carouselPost{{ post.id }}" data-bs-slide-to="{{ forloop.counter0 }}" class="{% if forloop.first %}active{% endif %}"></button>
+          {% endfor %}
+        </div>
+        <div class="carousel-inner">
+          {% for media in post.media_items.all %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+              {% if media.media_type == 'video' %}
+                <video src="{{ media.file.url }}" controls class="post-media-video"></video>
+              {% else %}
+                <img src="{{ media.file.url }}" class="post-media-img" alt="Post photo" loading="lazy">
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselPost{{ post.id }}" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselPost{{ post.id }}" data-bs-slide="next">
+          <span class="carousel-control-next-icon"></span>
+        </button>
+      </div>
+    {% elif post.media_items.first %}
+      {% with media=post.media_items.first %}
+        {% if media.media_type == 'video' %}
+          <video src="{{ media.file.url }}" controls class="post-media-video"></video>
+        {% else %}
+          <img src="{{ media.file.url }}" class="post-media-img" alt="Post photo" loading="lazy">
+        {% endif %}
+      {% endwith %}
+    {% else %}
+      <div class="p-5 text-center text-muted">No media attached</div>
+    {% endif %}
+  </div>
+
+  <!-- Post Actions -->
+  <div class="post-actions">
+    <div class="action-buttons-left">
+      <button class="btn-action btn-like {% if user.is_authenticated and post.id in user_liked_ids or is_liked %}liked{% endif %}" data-post-id="{{ post.id }}" title="Like">
+        <i class="bi {% if user.is_authenticated and post.id in user_liked_ids or is_liked %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+      </button>
+
+      <a href="{% url 'posts:post_detail' pk=post.id %}" class="btn-action text-light" title="Comment">
+        <i class="bi bi-chat"></i>
+      </a>
+
+      <a href="{% url 'messaging:inbox' %}" class="btn-action text-light" title="Share via message">
+        <i class="bi bi-send"></i>
+      </a>
+    </div>
+
+    <button class="btn-action btn-save {% if user.is_authenticated and post.id in user_saved_ids or is_saved %}saved{% endif %}" data-post-id="{{ post.id }}" title="Bookmark">
+      <i class="bi {% if user.is_authenticated and post.id in user_saved_ids or is_saved %}bi-bookmark-fill{% else %}bi-bookmark{% endif %}"></i>
+    </button>
+  </div>
+
+  <!-- Post Body & Likes -->
+  <div class="post-body">
+    <div class="likes-count" data-post-id="{{ post.id }}">
+      <span>{{ post.likes_count }}</span> likes
+    </div>
+
+    {% if post.caption %}
+      <div class="post-caption">
+        <a href="{% url 'accounts:profile' username=post.author.username %}" class="caption-username">{{ post.author.username }}</a>
+        {{ post.caption|urlize }}
+      </div>
+    {% endif %}
+
+    <!-- Hashtags -->
+    {% if post.hashtags.exists %}
+      <div class="mb-2">
+        {% for tag in post.hashtags.all %}
+          <a href="{% url 'posts:hashtag_posts' tag_name=tag.name %}" class="post-hashtag me-2">#{{ tag.name }}</a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Comment Count link -->
+    {% if post.comments_count > 0 %}
+      <a href="{% url 'posts:post_detail' pk=post.id %}" class="view-comments-btn" data-post-id="{{ post.id }}">
+        View all {{ post.comments_count }} comments
+      </a>
+    {% endif %}
+
+    <div class="post-time">{{ post.created_at|naturaltime }}</div>
+  </div>
+
+  <!-- Inline Comment Box -->
+  {% if user.is_authenticated %}
+    <form class="post-comment-form comment-ajax-form" data-post-id="{{ post.id }}">
+      <input type="text" class="form-control comment-input" placeholder="Add a comment..." required>
+      <button type="submit" class="comment-submit-btn">Post</button>
+    </form>
+  {% endif %}
+</article>

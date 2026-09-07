@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}@{{ profile_user.username }} • Hold On{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+  <!-- Profile Header -->
+  <header class="profile-header">
+    <div class="profile-avatar-wrapper">
+      <img src="{{ profile_user.avatar_url }}" alt="{{ profile_user.username }}" class="profile-avatar-large">
+    </div>
+
+    <div class="profile-info">
+      <div class="profile-title-row">
+        <h2 class="profile-username mb-0">{{ profile_user.username }}</h2>
+
+        {% if is_owner %}
+          <a href="{% url 'accounts:edit_profile' %}" class="btn btn-surface btn-sm">Edit profile</a>
+        {% else %}
+          {% if is_following %}
+            <button class="btn btn-surface btn-sm btn-follow-toggle" data-username="{{ profile_user.username }}">Following</button>
+          {% elif is_pending %}
+            <button class="btn btn-surface btn-sm btn-follow-toggle" data-username="{{ profile_user.username }}">Requested</button>
+          {% else %}
+            <button class="btn btn-brand btn-sm btn-follow-toggle" data-username="{{ profile_user.username }}">Follow</button>
+          {% endif %}
+
+          <a href="{% url 'messaging:start_conversation' username=profile_user.username %}" class="btn btn-surface btn-sm">
+            <i class="bi bi-chat-dots me-1"></i> Message
+          </a>
+        {% endif %}
+      </div>
+
+      <!-- Stats -->
+      <div class="profile-stats">
+        <div class="stat-item"><span class="stat-num">{{ profile_user.posts_count }}</span> posts</div>
+        <a href="{% url 'accounts:followers' username=profile_user.username %}" class="stat-item">
+          <span class="stat-num followers-stat-num">{{ profile_user.followers_count }}</span> followers
+        </a>
+        <a href="{% url 'accounts:following' username=profile_user.username %}" class="stat-item">
+          <span class="stat-num">{{ profile_user.following_count }}</span> following
+        </a>
+      </div>
+
+      <!-- Bio & Details -->
+      <div class="profile-bio">
+        {% if profile_user.get_full_name %}
+          <div class="fw-bold">{{ profile_user.get_full_name }}</div>
+        {% endif %}
+        {% if profile_user.bio %}
+          <div>{{ profile_user.bio|linebreaksbr }}</div>
+        {% endif %}
+        {% if profile_user.website_link %}
+          <a href="{{ profile_user.website_link }}" target="_blank" rel="noopener" class="profile-website mt-1">
+            <i class="bi bi-link-45deg"></i> {{ profile_user.website_link }}
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- Pending Follow Requests (Visible only to owner of private account) -->
+  {% if is_owner and pending_requests %}
+    <div class="card-custom p-3 mb-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-person-plus-fill text-warning me-2"></i> Follow Requests ({{ pending_requests.count }})</h6>
+      <div class="d-flex flex-column gap-2">
+        {% for req in pending_requests %}
+          <div class="d-flex align-items-center justify-content-between p-2 rounded bg-surface req-row-{{ req.id }}">
+            <div class="d-flex align-items-center gap-2">
+              <img src="{{ req.follower.avatar_url }}" class="rounded-circle" style="width:36px; height:36px; object-fit:cover;" alt="avatar">
+              <div>
+                <a href="{% url 'accounts:profile' username=req.follower.username %}" class="fw-bold text-light text-decoration-none">
+                  {{ req.follower.username }}
+                </a>
+                <small class="text-muted d-block">{{ req.follower.get_full_name }}</small>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-brand btn-sm btn-req-action" data-follow-id="{{ req.id }}" data-action="accept">Confirm</button>
+              <button class="btn btn-surface btn-sm btn-req-action" data-follow-id="{{ req.id }}" data-action="deny">Delete</button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Profile Content / Grid Tabs -->
+  {% if can_view_content %}
+    <div class="profile-tabs">
+      <button class="tab-btn active" id="tab-posts-btn" onclick="switchProfileTab('posts')">
+        <i class="bi bi-grid-3x3"></i> Posts
+      </button>
+      {% if is_owner %}
+        <button class="tab-btn" id="tab-saved-btn" onclick="switchProfileTab('saved')">
+          <i class="bi bi-bookmark"></i> Saved
+        </button>
+      {% endif %}
+    </div>
+
+    <!-- User Posts Grid -->
+    <div id="posts-grid-container" class="posts-grid">
+      {% for post in posts %}
+        <a href="{% url 'posts:post_detail' pk=post.id %}" class="grid-post-item">
+          {% with media=post.media_items.first %}
+            {% if media %}
+              {% if media.media_type == 'video' %}
+                <video src="{{ media.file.url }}"></video>
+              {% else %}
+                <img src="{{ media.file.url }}" alt="Post thumbnail" loading="lazy">
+              {% endif %}
+            {% endif %}
+          {% endwith %}
+
+          {% if post.media_items.count > 1 %}
+            <i class="bi bi-collection-fill carousel-indicator-icon"></i>
+          {% endif %}
+
+          <div class="grid-post-overlay">
+            <div><i class="bi bi-heart-fill me-1"></i> {{ post.likes.count }}</div>
+            <div><i class="bi bi-chat-fill me-1"></i> {{ post.comments.count }}</div>
+          </div>
+        </a>
+      {% empty %}
+        <div class="col-12 text-center py-5 text-muted grid-column-all" style="grid-column: 1 / -1;">
+          <i class="bi bi-camera fs-1 mb-2 d-block"></i>
+          <h5>No Posts Yet</h5>
+          {% if is_owner %}
+            <a href="{% url 'posts:post_create' %}" class="btn btn-brand btn-sm mt-2">Share your first photo</a>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Saved Posts Grid (Owner only) -->
+    {% if is_owner %}
+      <div id="saved-grid-container" class="posts-grid" style="display: none;">
+        {% for post in saved_posts %}
+          <a href="{% url 'posts:post_detail' pk=post.id %}" class="grid-post-item">
+            {% with media=post.media_items.first %}
+              {% if media %}
+                <img src="{{ media.file.url }}" alt="Saved post thumbnail" loading="lazy">
+              {% endif %}
+            {% endwith %}
+            <div class="grid-post-overlay">
+              <div><i class="bi bi-heart-fill me-1"></i> {{ post.likes.count }}</div>
+              <div><i class="bi bi-chat-fill me-1"></i> {{ post.comments.count }}</div>
+            </div>
+          </a>
+        {% empty %}
+          <div class="col-12 text-center py-5 text-muted" style="grid-column: 1 / -1;">
+            <i class="bi bi-bookmark fs-1 mb-2 d-block"></i>
+            <h5>Save posts to view them here</h5>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+  {% else %}
+    <!-- Private Account Lock Screen -->
+    <div class="text-center py-5 card-custom mt-3 p-5">
+      <i class="bi bi-lock-fill fs-1 text-muted mb-3 d-block"></i>
+      <h5 class="fw-bold">This Account is Private</h5>
+      <p class="text-muted">Follow this account to see their photos and videos.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchProfileTab(tab) {
+  const postsTab = document.getElementById('tab-posts-btn');
+  const savedTab = document.getElementById('tab-saved-btn');
+  const postsGrid = document.getElementById('posts-grid-container');
+  const savedGrid = document.getElementById('saved-grid-container');
+
+  if (tab === 'posts') {
+    postsTab.classList.add('active');
+    if (savedTab) savedTab.classList.remove('active');
+    postsGrid.style.display = 'grid';
+    if (savedGrid) savedGrid.style.display = 'none';
+  } else if (tab === 'saved') {
+    if (savedTab) savedTab.classList.add('active');
+    postsTab.classList.remove('active');
+    postsGrid.style.display = 'none';
+    if (savedGrid) savedGrid.style.display = 'grid';
+  }
+}
+</script>
+{% endblock %}

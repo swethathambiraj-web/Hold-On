@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Explore • Hold On{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 960px;">
+  <!-- Popular Hashtags Pill Bar -->
+  {% if popular_tags %}
+    <div class="d-flex align-items-center gap-2 mb-4 overflow-x-auto pb-2" style="scrollbar-width: none;">
+      <span class="text-muted fw-bold small me-1 flex-shrink-0"><i class="bi bi-fire text-danger"></i> TRENDING:</span>
+      {% for tag in popular_tags %}
+        <a href="{% url 'posts:hashtag_posts' tag_name=tag.name %}" class="btn btn-surface btn-sm rounded-pill flex-shrink-0" style="font-size: 0.82rem;">
+          #{{ tag.name }} <span class="text-muted">({{ tag.num_posts }})</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Explore Posts Grid -->
+  <div class="posts-grid">
+    {% for post in posts %}
+      <a href="{% url 'posts:post_detail' pk=post.id %}" class="grid-post-item">
+        {% with media=post.media_items.first %}
+          {% if media %}
+            {% if media.media_type == 'video' %}
+              <video src="{{ media.file.url }}"></video>
+            {% else %}
+              <img src="{{ media.file.url }}" alt="Explore photo" loading="lazy">
+            {% endif %}
+          {% endif %}
+        {% endwith %}
+
+        {% if post.media_items.count > 1 %}
+          <i class="bi bi-collection-fill carousel-indicator-icon"></i>
+        {% endif %}
+
+        <div class="grid-post-overlay">
+          <div><i class="bi bi-heart-fill me-1"></i> {{ post.likes.count }}</div>
+          <div><i class="bi bi-chat-fill me-1"></i> {{ post.comments.count }}</div>
+        </div>
+      </a>
+    {% empty %}
+      <div class="text-center py-5 text-muted" style="grid-column: 1 / -1;">
+        <i class="bi bi-compass fs-1 mb-2 d-block"></i>
+        <p>No public posts to explore yet.</p>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if page_obj.has_next %}
+    <div class="text-center my-4">
+      <a href="?page={{ page_obj.next_page_number }}" class="btn btn-surface btn-sm px-4">Load more</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

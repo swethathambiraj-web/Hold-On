@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Profile • Hold On{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 650px;">
+  <div class="card-custom p-4 p-md-5">
+    <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-secondary">
+      <img src="{{ user.avatar_url }}" class="rounded-circle" style="width: 56px; height: 56px; object-fit: cover;" alt="avatar">
+      <div>
+        <h5 class="fw-bold mb-0">{{ user.username }}</h5>
+        <small class="text-muted">{{ user.get_full_name }}</small>
+      </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form|crispy }}
+      
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <a href="{% url 'accounts:profile' username=user.username %}" class="btn btn-surface">Cancel</a>
+        <button type="submit" class="btn btn-brand">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

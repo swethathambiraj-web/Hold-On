@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Messages • Hold On{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+  <div class="messages-container">
+    <!-- Conversations Sidebar -->
+    <div class="inbox-sidebar w-100 w-md-auto" style="min-width: 320px;">
+      <div class="inbox-header">
+        <span class="text-light">{{ user.username }}</span>
+        <button class="btn btn-link text-light p-0" data-bs-toggle="modal" data-bs-target="#newChatModal">
+          <i class="bi bi-pencil-square fs-5"></i>
+        </button>
+      </div>
+
+      <div class="conversations-list">
+        {% for conv in conversations %}
+          {% with other=conv.get_other_participant|default:user %}
+            <a href="{% url 'messaging:chat' conversation_id=conv.id %}" class="conversation-item text-decoration-none">
+              <img src="{{ other.avatar_url }}" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;" alt="{{ other.username }}">
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold text-light" style="font-size: 0.92rem;">{{ other.username }}</span>
+                  <small class="text-muted" style="font-size: 0.72rem;">{{ conv.updated_at|naturaltime }}</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                  <span class="text-muted text-truncate" style="font-size: 0.82rem; max-width: 180px;">
+                    {% with last_msg=conv.last_message %}
+                      {% if last_msg %}
+                        {% if last_msg.sender == user %}You: {% endif %}{{ last_msg.text|default:"[Media]" }}
+                      {% else %}
+                        Start a conversation
+                      {% endif %}
+                    {% endwith %}
+                  </span>
+                  {% with unread=conv.unread_messages_count_for_user %}
+                    {% if unread > 0 %}
+                      <span class="badge bg-danger rounded-pill">{{ unread }}</span>
+                    {% endif %}
+                  {% endwith %}
+                </div>
+              </div>
+            </a>
+          {% endwith %}
+        {% empty %}
+          <div class="text-center py-5 text-muted p-4">
+            <i class="bi bi-chat-dots fs-1 mb-2 d-block"></i>
+            <h6>No messages yet</h6>
+            <p class="small">Send direct messages to friends.</p>
+            <button class="btn btn-brand btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#newChatModal">Send message</button>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Empty Chat placeholder for desktop -->
+    <div class="d-none d-md-flex chat-main align-items-center justify-content-center text-center p-5">
+      <div>
+        <div class="brand-icon mx-auto mb-3" style="width: 70px; height: 70px; font-size: 2rem;">
+          <i class="bi bi-chat-heart-fill"></i>
+        </div>
+        <h4 class="fw-bold">Your Messages</h4>
+        <p class="text-muted">Send private photos and messages to a friend or group.</p>
+        <button class="btn btn-brand mt-2" data-bs-toggle="modal" data-bs-target="#newChatModal">Send message</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Chat Modal -->
+<div class="modal fade" id="newChatModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-custom">
+      <div class="modal-header border-secondary">
+        <h6 class="modal-title fw-bold">New Message</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted small mb-3">Type the username of the person you'd like to chat with:</p>
+        <form id="new-chat-form" onsubmit="handleStartChat(event)">
+          <div class="input-group mb-3">
+            <span class="input-group-text bg-surface border-secondary text-muted">@</span>
+            <input type="text" id="chat-target-username" class="form-control bg-surface border-secondary text-light" placeholder="username..." required>
+          </div>
+          <button type="submit" class="btn btn-brand w-100">Start Chat</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function handleStartChat(e) {
+  e.preventDefault();
+  const username = document.getElementById('chat-target-username').value.trim();
+  if (username) {
+    window.location.href = `/messages/start/${username}/`;
+  }
+}
+</script>
+{% endblock %}

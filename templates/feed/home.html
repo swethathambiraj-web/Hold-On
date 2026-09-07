@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Feed • Hold On{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <!-- Main Feed Column -->
+    <div class="col-12 col-lg-7" style="max-width: 630px;">
+      
+      <!-- Stories Tray -->
+      <div class="stories-tray">
+        <!-- Add Story Item -->
+        <a href="{% url 'stories:create' %}" class="story-item text-decoration-none">
+          <div class="story-ring add-story">
+            <img src="{{ request.user.avatar_url }}" alt="Your avatar" class="story-avatar">
+            <span class="story-plus-badge"><i class="bi bi-plus"></i></span>
+          </div>
+          <span class="story-username">Your story</span>
+        </a>
+
+        <!-- Followed Users' Stories -->
+        {% for item in stories_tray %}
+          {% if not item.is_self %}
+            <div class="story-item" onclick="StoryViewer.openUserStories('{{ item.user.username }}')">
+              <div class="story-ring {% if item.all_viewed %}seen{% endif %}">
+                <img src="{{ item.user.avatar_url }}" alt="{{ item.user.username }}" class="story-avatar">
+              </div>
+              <span class="story-username">{{ item.user.username }}</span>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- Feed Posts Stream -->
+      {% for post in posts %}
+        {% include 'includes/post_card.html' with post=post %}
+      {% empty %}
+        <div class="card-custom p-5 text-center my-4">
+          <div class="brand-icon mx-auto mb-3" style="width: 50px; height: 50px; font-size: 1.5rem;">
+            <i class="bi bi-camera"></i>
+          </div>
+          <h4 class="fw-bold">Welcome to Hold On!</h4>
+          <p class="text-muted">Follow your friends or explore trending posts to fill your home feed.</p>
+          <div class="d-flex justify-content-center gap-2 mt-3">
+            <a href="{% url 'feed:explore' %}" class="btn btn-brand">Explore Posts</a>
+            <a href="{% url 'posts:post_create' %}" class="btn btn-surface">Create First Post</a>
+          </div>
+        </div>
+      {% endfor %}
+
+      <!-- Pagination / Load more -->
+      {% if page_obj.has_next %}
+        <div class="text-center my-4">
+          <a href="?page={{ page_obj.next_page_number }}" class="btn btn-surface btn-sm px-4">Load more posts</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Right Sidebar: User Profile & Suggestions (Desktop Only) -->
+    <div class="d-none d-lg-block col-lg-4 ps-4">
+      <!-- Current User Mini Profile -->
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <a href="{% url 'accounts:profile' username=request.user.username %}" class="d-flex align-items-center gap-3 text-decoration-none">
+          <img src="{{ request.user.avatar_url }}" class="rounded-circle" style="width: 52px; height: 52px; object-fit: cover; border: 1px solid var(--border-color);" alt="avatar">
+          <div>
+            <div class="fw-bold text-light" style="font-size: 0.95rem;">{{ request.user.username }}</div>
+            <div class="text-muted" style="font-size: 0.8rem;">{{ request.user.get_full_name }}</div>
+          </div>
+        </a>
+        <a href="{% url 'accounts:profile' username=request.user.username %}" class="text-primary fw-bold text-decoration-none" style="font-size: 0.82rem;">View</a>
+      </div>
+
+      <!-- Suggested Users Section -->
+      {% if suggested_users %}
+        <div class="mb-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <span class="text-muted fw-bold" style="font-size: 0.82rem; letter-spacing: 0.5px;">SUGGESTIONS FOR YOU</span>
+            <a href="{% url 'feed:explore' %}" class="text-light fw-bold text-decoration-none" style="font-size: 0.8rem;">See All</a>
+          </div>
+
+          <div class="d-flex flex-column gap-3">
+            {% for s_user in suggested_users %}
+              <div class="d-flex align-items-center justify-content-between">
+                <a href="{% url 'accounts:profile' username=s_user.username %}" class="d-flex align-items-center gap-2 text-decoration-none">
+                  <img src="{{ s_user.avatar_url }}" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;" alt="{{ s_user.username }}">
+                  <div>
+                    <div class="fw-bold text-light" style="font-size: 0.85rem;">{{ s_user.username }}</div>
+                    <small class="text-muted" style="font-size: 0.72rem;">Suggested for you</small>
+                  </div>
+                </a>
+                <button class="btn btn-sm btn-brand btn-follow-toggle py-1 px-3" data-username="{{ s_user.username }}" style="font-size: 0.78rem;">Follow</button>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Footer Links -->
+      <div class="text-muted" style="font-size: 0.75rem; line-height: 1.8;">
+        <div>About • Help • Press • API • Jobs • Privacy • Terms</div>
+        <div class="mt-2">© 2026 HOLD ON BY DEEPMIND</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

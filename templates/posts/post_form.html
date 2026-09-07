@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create New Post • Hold On{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 650px;">
+  <div class="card-custom p-4 p-md-5">
+    <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom border-secondary">
+      <h4 class="fw-bold mb-0"><i class="bi bi-plus-square text-danger me-2"></i> Create New Post</h4>
+      <a href="{% url 'feed:home' %}" class="btn-close btn-close-white"></a>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="post-create-form">
+      {% csrf_token %}
+
+      <!-- File Upload Box (Multiple Photos / Videos) -->
+      <div class="mb-4">
+        <label class="form-label fw-bold">Photos / Videos (Select one or multiple for carousel)</label>
+        <div class="border border-dashed rounded-4 p-4 text-center bg-surface" style="cursor: pointer;" onclick="document.getElementById('id_media_files').click()">
+          <i class="bi bi-images fs-1 text-primary mb-2 d-block"></i>
+          <p class="mb-1 fw-bold">Drag and drop photos here or click to browse</p>
+          <small class="text-muted">Supports JPG, PNG, WEBP, MP4 (Max 10 files)</small>
+          <input type="file" name="media_files" id="id_media_files" multiple accept="image/*,video/*" class="d-none" onchange="previewFiles(this)" required>
+        </div>
+
+        <!-- Preview Thumbnails Container -->
+        <div id="media-preview-container" class="d-flex gap-2 flex-wrap mt-3"></div>
+      </div>
+
+      {{ form|crispy }}
+
+      <div class="d-grid mt-4">
+        <button type="submit" class="btn btn-brand py-2 fs-6">Share Post</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewFiles(input) {
+  const container = document.getElementById('media-preview-container');
+  container.innerHTML = '';
+
+  if (input.files) {
+    Array.from(input.files).forEach((file, idx) => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const div = document.createElement('div');
+        div.className = 'position-relative';
+        div.style.width = '75px';
+        div.style.height = '75px';
+
+        if (file.type.startsWith('video/')) {
+          div.innerHTML = `
+            <video src="${e.target.result}" class="rounded-3 w-100 h-100" style="object-fit: cover;"></video>
+            <span class="position-absolute top-0 end-0 badge bg-dark"><i class="bi bi-play-fill"></i></span>
+          `;
+        } else {
+          div.innerHTML = `
+            <img src="${e.target.result}" class="rounded-3 w-100 h-100" style="object-fit: cover; border: 1px solid var(--border-color);">
+            <span class="position-absolute bottom-0 end-0 badge bg-dark" style="font-size: 0.65rem;">#${idx + 1}</span>
+          `;
+        }
+        container.appendChild(div);
+      }
+      reader.readAsDataURL(file);
+    });
+  }
+}
+</script>
+{% endblock %}

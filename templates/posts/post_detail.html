@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Post by @{{ post.author.username }} • Hold On{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 950px;">
+  <div class="card-custom overflow-hidden">
+    <div class="row g-0">
+      <!-- Media Column -->
+      <div class="col-12 col-md-7 bg-black d-flex align-items-center justify-content-center" style="min-height: 480px;">
+        <div class="post-media-wrapper" data-post-id="{{ post.id }}" style="aspect-ratio: auto; height: 100%;">
+          <i class="bi bi-heart-fill heart-burst"></i>
+
+          {% if post.media_items.count > 1 %}
+            <div id="carouselPostDetail" class="carousel slide h-100 w-100" data-bs-interval="false">
+              <div class="carousel-indicators">
+                {% for media in post.media_items.all %}
+                  <button type="button" data-bs-target="#carouselPostDetail" data-bs-slide-to="{{ forloop.counter0 }}" class="{% if forloop.first %}active{% endif %}"></button>
+                {% endfor %}
+              </div>
+              <div class="carousel-inner h-100">
+                {% for media in post.media_items.all %}
+                  <div class="carousel-item h-100 {% if forloop.first %}active{% endif %}">
+                    {% if media.media_type == 'video' %}
+                      <video src="{{ media.file.url }}" controls class="w-100 h-100" style="object-fit: contain;"></video>
+                    {% else %}
+                      <img src="{{ media.file.url }}" class="d-block w-100 h-100" style="object-fit: contain;" alt="Post photo">
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+              <button class="carousel-control-prev" type="button" data-bs-target="#carouselPostDetail" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#carouselPostDetail" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+              </button>
+            </div>
+          {% elif post.media_items.first %}
+            {% with media=post.media_items.first %}
+              {% if media.media_type == 'video' %}
+                <video src="{{ media.file.url }}" controls class="w-100 h-100" style="object-fit: contain;"></video>
+              {% else %}
+                <img src="{{ media.file.url }}" class="w-100 h-100" style="object-fit: contain;" alt="Post photo">
+              {% endif %}
+            {% endwith %}
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Details & Comments Column -->
+      <div class="col-12 col-md-5 d-flex flex-direction-column flex-column justify-content-between border-start border-secondary" style="height: 580px;">
+        <!-- Header -->
+        <div class="p-3 border-bottom border-secondary d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'accounts:profile' username=post.author.username %}">
+              <img src="{{ post.author.avatar_url }}" class="author-avatar" alt="{{ post.author.username }}">
+            </a>
+            <div>
+              <a href="{% url 'accounts:profile' username=post.author.username %}" class="author-name">
+                {{ post.author.username }}
+              </a>
+              {% if post.location %}
+                <div class="post-location"><i class="bi bi-geo-alt"></i> {{ post.location }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if post.author == request.user %}
+            <div class="dropdown">
+              <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                <i class="bi bi-three-dots"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end bg-secondary border-secondary">
+                <li><a class="dropdown-item text-warning" href="{% url 'posts:post_edit' pk=post.id %}"><i class="bi bi-pencil me-2"></i> Edit</a></li>
+                <li>
+                  <form action="{% url 'posts:post_delete' pk=post.id %}" method="POST" onsubmit="return confirm('Delete this post?');">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i> Delete</button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Comments & Caption Scrollable Area -->
+        <div class="p-3 flex-grow-1 overflow-y-auto comments-list-{{ post.id }}">
+          <!-- Author Caption as first comment -->
+          {% if post.caption %}
+            <div class="d-flex align-items-start gap-2 mb-3 pb-3 border-bottom border-secondary">
+              <img src="{{ post.author.avatar_url }}" class="author-avatar" style="width: 32px; height: 32px;" alt="{{ post.author.username }}">
+              <div>
+                <span class="caption-username">{{ post.author.username }}</span>
+                <span class="comment-text">{{ post.caption|urlize }}</span>
+                {% if post.hashtags.exists %}
+                  <div class="mt-1">
+                    {% for tag in post.hashtags.all %}
+                      <a href="{% url 'posts:hashtag_posts' tag_name=tag.name %}" class="post-hashtag me-2">#{{ tag.name }}</a>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                <div class="text-muted mt-1" style="font-size: 0.72rem;">{{ post.created_at|naturaltime }}</div>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Comments List -->
+          {% for comment in comments %}
+            <div class="comment-item mb-3" id="comment-{{ comment.id }}">
+              <div class="d-flex align-items-start gap-2">
+                <a href="{% url 'accounts:profile' username=comment.user.username %}">
+                  <img src="{{ comment.user.avatar_url }}" class="author-avatar" style="width: 30px; height: 30px;" alt="{{ comment.user.username }}">
+                </a>
+                <div class="flex-grow-1">
+                  <span class="caption-username">{{ comment.user.username }}</span>
+                  <span class="comment-text">{{ comment.text }}</span>
+                  <div class="d-flex align-items-center gap-3 mt-1 text-muted" style="font-size: 0.72rem;">
+                    <span>{{ comment.created_at|naturaltime }}</span>
+                    {% if user.is_authenticated and comment.user == request.user or post.author == request.user %}
+                      <button class="btn btn-link p-0 text-danger btn-delete-comment" data-comment-id="{{ comment.id }}" style="font-size: 0.72rem;">Delete</button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="text-center py-4 text-muted">
+              <small>No comments yet. Say something!</small>
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Post Action & Likes Footer -->
+        <div class="border-top border-secondary p-3 bg-secondary">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center gap-3">
+              <button class="btn-action btn-like {% if is_liked %}liked{% endif %}" data-post-id="{{ post.id }}">
+                <i class="bi {% if is_liked %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+              </button>
+              <a href="{% url 'messaging:inbox' %}" class="btn-action text-light">
+                <i class="bi bi-send"></i>
+              </a>
+            </div>
+            <button class="btn-action btn-save {% if is_saved %}saved{% endif %}" data-post-id="{{ post.id }}">
+              <i class="bi {% if is_saved %}bi-bookmark-fill{% else %}bi-bookmark{% endif %}"></i>
+            </button>
+          </div>
+
+          <div class="likes-count fw-bold" data-post-id="{{ post.id }}" style="font-size: 0.88rem;">
+            <span>{{ post.likes_count }}</span> likes
+          </div>
+          <div class="text-muted" style="font-size: 0.72rem;">{{ post.created_at|naturaltime }}</div>
+        </div>
+
+        <!-- Inline Comment Form -->
+        {% if user.is_authenticated %}
+          <form class="post-comment-form comment-ajax-form border-top border-secondary p-2 px-3" data-post-id="{{ post.id }}">
+            <input type="text" class="form-control comment-input" placeholder="Add a comment..." required>
+            <button type="submit" class="comment-submit-btn">Post</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
