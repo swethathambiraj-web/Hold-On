@@ -11,6 +11,9 @@ from notifications.views import NotificationViewSet
 from messaging.views import ConversationViewSet
 from feed.views import FeedAPIView, ExploreAPIView
 
+from django.urls import path, include, re_path
+from django.views.static import serve
+
 # DRF Router Configuration
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
@@ -35,8 +38,11 @@ urlpatterns = [
     path('api/v1/feed/', FeedAPIView.as_view(), name='api_feed'),
     path('api/v1/explore/', ExploreAPIView.as_view(), name='api_explore'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+
+    # Media & Static fallback
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
+
