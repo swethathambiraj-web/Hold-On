@@ -15,19 +15,25 @@ from .forms import CustomUserCreationForm, ProfileEditForm
 from .serializers import UserProfileSerializer, FollowSerializer, UserSummarySerializer
 
 
+from django.db import IntegrityError
+
 def signup_view(request):
     if request.user.is_authenticated:
         return redirect('feed:home')
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, f"Welcome to Hold On, @{user.username}!")
-            return redirect('feed:home')
+            try:
+                user = form.save()
+                login(request, user)
+                messages.success(request, f"Welcome to Hold On, @{user.username}!")
+                return redirect('feed:home')
+            except IntegrityError:
+                form.add_error(None, "An account with this username or email already exists. Please log in.")
     else:
         form = CustomUserCreationForm()
     return render(request, 'accounts/signup.html', {'form': form})
+
 
 
 def login_view(request):

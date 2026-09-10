@@ -10,11 +10,22 @@ class CustomUserCreationForm(UserCreationForm):
         model = User
         fields = ('username', 'email')
 
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if username:
+            username = username.strip()
+            if User.objects.filter(username__iexact=username).exists():
+                raise forms.ValidationError("A user with that username already exists.")
+        return username
+
     def clean_email(self):
         email = self.cleaned_data.get('email')
-        if User.objects.filter(email=email).exists():
-            raise forms.ValidationError("A user with that email already exists.")
+        if email:
+            email = email.strip().lower()
+            if User.objects.filter(email__iexact=email).exists():
+                raise forms.ValidationError("A user with that email already exists.")
         return email
+
 
 
 class ProfileEditForm(forms.ModelForm):
